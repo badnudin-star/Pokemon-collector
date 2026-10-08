@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PokéTracker Pro - Android APK & PWA Edition</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'md-sys-primary': '#2563eb',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.4); border-radius: 9999px; }
+        .status-both-bg { background: linear-gradient(135deg, #fef08a 0%, #fef08a 50%, #fecaca 50%, #fecaca 100%); }
+        .status-both-bg-dark { background: linear-gradient(135deg, #713f12 0%, #713f12 50%, #7f1d1d 50%, #7f1d1d 100%); }
+        .status-common-bg { background-color: #fef08a; }
+        .status-common-bg-dark { background-color: #713f12; color: #fef08a; }
+        .status-keep-bg { background-color: #fecaca; }
+        .status-keep-bg-dark { background-color: #7f1d1d; color: #fecaca; }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-zinc-900 text-gray-900 dark:text-gray-100 font-sans min-h-screen flex flex-col transition-colors duration-200 select-none pb-20">
+
+    <!-- Header Section -->
+    <header class="sticky top-0 z-30 bg-white dark:bg-zinc-800 shadow-md transition-colors duration-200">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+            <div class="flex items-center space-x-2">
+                <canvas id="pokedexHeaderIcon" width="36" height="36" class="rounded-xl shadow-sm cursor-pointer" title="Pokédex Icon"></canvas>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight flex items-center gap-1.5">
+                        PokéTracker
+                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300">1025</span>
+                    </h1>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400">Android APK & PWA Ready</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-1 sm:space-x-2">
+                <!-- APK & PWA Download Button -->
+                <button id="apkInstallBtn" class="flex items-center space-x-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all">
+                    <i data-lucide="smartphone" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">APK / App Install</span>
+                </button>
+
+                <!-- Language Selector -->
+                <div class="relative flex items-center bg-gray-100 dark:bg-zinc-700/70 rounded-xl px-2 py-1 border border-gray-200 dark:border-zinc-600">
+                    <i data-lucide="languages" class="w-4 h-4 text-gray-500 dark:text-gray-300 mr-1.5"></i>
+                    <select id="langSelect" class="bg-transparent text-xs font-semibold text-gray-800 dark:text-gray-100 outline-none cursor-pointer">
+                        <option value="de" class="dark:bg-zinc-800">Deutsch 🇩🇪</option>
+                        <option value="en" class="dark:bg-zinc-800">English 🇬🇧</option>
+                        <option value="ja" class="dark:bg-zinc-800">日本語 (Kana) 🇯🇵</option>
+                        <option value="roomaji" class="dark:bg-zinc-800">Rōmaji 🇯🇵</option>
+                    </select>
+                </div>
+
+                <button id="themeToggle" class="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-600 dark:text-gray-300 transition-colors">
+                    <i data-lucide="moon" class="w-5 h-5 hidden dark:block"></i>
+                    <i data-lucide="sun" class="w-5 h-5 block dark:hidden"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Progress Stats -->
+        <div class="bg-gray-50 dark:bg-zinc-800/80 border-t border-b border-gray-200 dark:border-zinc-700 px-4 py-2">
+            <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between text-xs gap-2">
+                <div class="flex items-center space-x-3 sm:space-x-5">
+                    <span class="flex items-center gap-1 font-medium">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                        Gesamt: <strong id="statTotal">0</strong>
+                    </span>
+                    <span class="flex items-center gap-1 font-medium text-amber-700 dark:text-amber-400">
+                        <span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
+                        Common: <strong id="statCommon">0</strong>
+                    </span>
+                    <span class="flex items-center gap-1 font-medium text-rose-700 dark:text-rose-400">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
+                        Behaltbar: <strong id="statKeep">0</strong>
+                    </span>
+                </div>
+                <div class="w-full sm:w-auto flex items-center space-x-2">
+                    <div class="w-full sm:w-36 bg-gray-200 dark:bg-zinc-700 rounded-full h-2 overflow-hidden">
+                        <div id="progressBar" class="bg-gradient-to-r from-yellow-400 to-red-500 h-full w-0 transition-all duration-300"></div>
+                    </div>
+                    <span id="statPercent" class="font-bold text-gray-600 dark:text-gray-300 min-w-[35px]">0%</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto w-full px-4 pt-4 flex-1">
+        <div class="bg-white dark:bg-zinc-800 rounded-2xl p-3.5 shadow-sm border border-gray-100 dark:border-zinc-700/50 mb-4 space-y-3">
+            <!-- Search Field -->
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                <input type="text" id="searchInput" placeholder="Pokémon Name oder Pokédex #..." 
+                    class="w-full pl-10 pr-10 py-2 bg-gray-100 dark:bg-zinc-700/50 rounded-xl border-none text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                <button id="clearSearch" class="hidden absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <i data-lucide="x-circle" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Filter & Sort Row -->
+            <div class="flex flex-wrap gap-2 items-center justify-between text-xs">
+                <div class="flex items-center gap-1 overflow-x-auto py-0.5 max-w-full no-scrollbar">
+                    <button class="filter-btn active px-3 py-1.5 rounded-xl border font-medium bg-blue-600 text-white border-blue-600" data-status="all">Alle</button>
+                    <button class="filter-btn px-3 py-1.5 rounded-xl border font-medium bg-gray-100 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 border-transparent" data-status="common">🟨 Common</button>
+                    <button class="filter-btn px-3 py-1.5 rounded-xl border font-medium bg-gray-100 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 border-transparent" data-status="keep">🟥 Behaltbar</button>
+                    <button class="filter-btn px-3 py-1.5 rounded-xl border font-medium bg-gray-100 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 border-transparent" data-status="both">🟧 Beides</button>
+                    <button class="filter-btn px-3 py-1.5 rounded-xl border font-medium bg-gray-100 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 border-transparent" data-status="none">⚪ Offen</button>
+                </div>
+
+                <div class="w-full sm:w-auto flex justify-end pt-1 sm:pt-0">
+                    <select id="sortSelect" class="bg-gray-100 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 px-3 py-1.5 rounded-xl text-xs font-medium outline-none border-none cursor-pointer w-full sm:w-auto">
+                        <option value="id-asc">Nummer (#1 - #1025)</option>
+                        <option value="id-desc">Nummer (#1025 - #1)</option>
+                        <option value="name-asc">Name (A - Z)</option>
+                        <option value="name-desc">Name (Z - A)</option>
+                        <option value="keep-first">Behaltbare zuerst 🟥</option>
+                        <option value="common-first">Common zuerst 🟨</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div id="loadingState" class="flex flex-col items-center justify-center py-16 space-y-4">
+            <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <div class="text-center">
+                <p id="loadingTitle" class="text-gray-800 dark:text-gray-200 font-semibold text-sm">Lade alle 1025 Pokémon-Daten...</p>
+                <p id="loadingSubtitle" class="text-gray-500 dark:text-gray-400 text-xs mt-1">Spezies & Übersetzungen werden synchronisiert...</p>
+            </div>
+            <div class="w-64 bg-gray-200 dark:bg-zinc-700 rounded-full h-2.5 overflow-hidden">
+                <div id="syncProgress" class="bg-blue-600 h-full w-0 transition-all duration-150"></div>
+            </div>
+        </div>
+
+        <div id="emptyState" class="hidden flex-col items-center justify-center py-16 text-center">
+            <i data-lucide="ghost" class="w-12 h-12 text-gray-400 mb-2"></i>
+            <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300">Keine Pokémon gefunden</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Versuche eine andere Suche oder Filter-Option.</p>
+        </div>
+
+        <!-- Pokémon Grid -->
+        <div id="pokemonGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"></div>
+    </main>
+
+    <div id="apkModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-zinc-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 dark:border-zinc-700 space-y-5 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-gray-100 dark:border-zinc-700 pb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="bg-green-100 dark:bg-green-900/50 p-2 rounded-xl text-green-600 dark:text-green-400">
+                        <i data-lucide="smartphone" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base text-gray-900 dark:text-gray-100">Android App / APK Installer</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">PokéTracker als App nutzen</p>
+                    </div>
+                </div>
+                <button id="closeApkModal" class="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <!-- Canvas Icon Preview -->
+            <div class="flex items-center space-x-4 bg-gray-50 dark:bg-zinc-700/50 p-4 rounded-2xl border border-gray-100 dark:border-zinc-700">
+                <canvas id="pokedexModalCanvas" width="96" height="96" class="rounded-2xl shadow-md border border-gray-200 dark:border-zinc-600"></canvas>
+                <div class="space-y-1">
+                    <h4 class="font-bold text-sm">Pokédex App Icon (512x512 PNG)</h4>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Eigenes hochauflösendes Pokédex App Icon für dein Handy.</p>
+                    <button id="downloadIconBtn" class="text-xs text-blue-600 dark:text-blue-400 font-semibold underline flex items-center gap-1 pt-1">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> Icon herunterladen (.png)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Install Options -->
+            <div class="space-y-3">
+                <h4 class="font-bold text-xs uppercase tracking-wider text-gray-400">Installations-Optionen</h4>
+                
+                <!-- Native PWA Direct Install -->
+                <button id="pwaDirectBtn" class="w-full flex items-center justify-between p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-2xl hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all text-left">
+                    <div class="flex items-center space-x-3">
+                        <i data-lucide="download-cloud" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+                        <div>
+                            <p class="text-xs font-bold text-blue-900 dark:text-blue-200">Sofort auf Android installieren (PWA)</p>
+                            <p class="text-[11px] text-blue-700 dark:text-blue-400">Kein Play Store nötig - Verhält sich wie eine native APK!</p>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-blue-500"></i>
+                </button>
+
+                <!-- APK Builder Step Guide -->
+                <div class="bg-gray-50 dark:bg-zinc-700/30 p-4 rounded-2xl space-y-2 text-xs border border-gray-100 dark:border-zinc-700">
+                    <p class="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1">
+                        <i data-lucide="package" class="w-4 h-4 text-amber-500"></i> In echte `.apk` umwandeln (via PWABuilder):
+                    </p>
+                    <ol class="list-decimal list-inside space-y-1.5 text-gray-600 dark:text-gray-300">
+                        <li>Lade das <strong>Pokédex Icon</strong> oben herunter.</li>
+                        <li>Öffne <a href="https://www.pwabuilder.com" target="_blank" class="text-blue-600 dark:text-blue-400 underline font-bold">PWABuilder.com</a> auf deinem PC oder Handy.</li>
+                        <li>Gib die URL dieser App ein und klicke auf <strong>Package for Android</strong>.</li>
+                        <li>Lade die generierte <strong class="text-green-600 dark:text-green-400">.apk Datei</strong> direkt herunter und installiere sie auf deinem Android-Smartphone!</li>
+                    </ol>
+                </div>
+            </div>
+
+            <button id="closeModalFooter" class="w-full py-2.5 bg-gray-100 dark:bg-zinc-700 text-gray-700 dark:text-gray-200 font-bold text-xs rounded-xl hover:bg-gray-200 dark:hover:bg-zinc-600 transition-colors">
+                Schließen
+            </button>
+        </div>
+    </div>
+
+    <!-- Floating Action Scroll Button -->
+    <button id="fabScrollTop" class="fixed bottom-5 right-5 bg-blue-600 text-white p-3.5 rounded-full shadow-lg hover:bg-blue-700 transition-all opacity-0 pointer-events-none z-40 transform translate-y-2">
+        <i data-lucide="arrow-up" class="w-5 h-5"></i>
+    </button>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 px-4 py-2 rounded-full shadow-2xl text-xs font-medium flex items-center space-x-2 transition-all opacity-0 translate-y-8 pointer-events-none z-50">
+        <i id="toastIcon" data-lucide="check-circle" class="w-4 h-4 text-green-400 dark:text-green-600"></i>
+        <span id="toastMessage">Erfolgreich</span>
+    </div>
+
+    <script>
+        const TOTAL_POKEMON = 1025;
+        const CACHE_KEY_DATA = 'poke_data_v2_all';
+        const STORAGE_KEY_STATUS = 'poke_status_data';
+
+        let pokemonData = [];
+        let filteredPokemon = [];
+        let userStatus = {};
+
+        let currentLang = localStorage.getItem('poke_lang') || 'de';
+        let activeStatusFilter = 'all';
+        let activeSort = 'id-asc';
+        let searchQuery = '';
+        let deferredPrompt = null;
+
+        // DOM Elements
+        const grid = document.getElementById('pokemonGrid');
+        const loadingState = document.getElementById('loadingState');
+        const emptyState = document.getElementById('emptyState');
+        const syncProgress = document.getElementById('syncProgress');
+        const searchInput = document.getElementById('searchInput');
+        const clearSearchBtn = document.getElementById('clearSearch');
+        const langSelect = document.getElementById('langSelect');
+        const sortSelect = document.getElementById('sortSelect');
+        const fabScrollTop = document.getElementById('fabScrollTop');
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+            initTheme();
+            loadUserStatus();
+            drawPokedexIcon();
+            registerDynamicPWA();
+
+            langSelect.value = currentLang;
+            await initPokemonData();
+            setupEventListeners();
+        });
+
+        function drawPokedexIcon() {
+            const drawCanvas = (canvasId, size) => {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const center = size / 2;
+                const radius = size * 0.44;
+
+                ctx.clearRect(0, 0, size, size);
+
+                // Background Circle / Outer Border
+                ctx.beginPath();
+                ctx.arc(center, center, radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#1e293b';
+                ctx.fill();
+
+                // Top Red Half
+                ctx.beginPath();
+                ctx.arc(center, center, radius * 0.92, Math.PI, 0, false);
+                ctx.fillStyle = '#ef4444';
+                ctx.fill();
+
+                // Bottom White Half
+                ctx.beginPath();
+                ctx.arc(center, center, radius * 0.92, 0, Math.PI, false);
+                ctx.fillStyle = '#f8fafc';
+                ctx.fill();
+
+                // Center Black Belt Line
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(center - radius, center - size * 0.05, radius * 2, size * 0.1);
+
+                // Center Outer Ring
+                ctx.beginPath();
+                ctx.arc(center, center, size * 0.14, 0, Math.PI * 2);
+                ctx.fillStyle = '#1e293b';
+                ctx.fill();
+
+                // Center Inner Button
+                ctx.beginPath();
+                ctx.arc(center, center, size * 0.08, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+
+                // Shiny Lens Effect (Glossy)
+                ctx.beginPath();
+                ctx.arc(center - radius * 0.3, center - radius * 0.3, radius * 0.25, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+                ctx.fill();
+            };
+
+            drawCanvas('pokedexHeaderIcon', 36);
+            drawCanvas('pokedexModalCanvas', 96);
+        }
+
+        function registerDynamicPWA() {
+            // Generate Manifest Blob dynamically
+            const canvas = document.getElementById('pokedexModalCanvas');
+            const iconUrl = canvas ? canvas.toDataURL('image/png') : '';
+
+            const manifestObj = {
+                name: "PokéTracker Pro - Pokémon Checklist",
+                short_name: "PokéTracker",
+                description: "Behalte den Überblick über alle 1025 Pokémon (Common & Behaltbar).",
+                start_url: window.location.href,
+                display: "standalone",
+                background_color: "#18181b",
+                theme_color: "#ef4444",
+                icons: [
+                    {
+                        src: iconUrl || "https://placehold.co/512x512/ef4444/ffffff?text=PokéBall",
+                        sizes: "512x512",
+                        type: "image/png",
+                        purpose: "any maskable"
+                    }
+                ]
+            };
+
+            const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/json' });
+            const manifestUrl = URL.createObjectURL(manifestBlob);
+            
+            const link = document.createElement('link');
+            link.rel = 'manifest';
+            link.href = manifestUrl;
+            document.head.appendChild(link);
+
+            // Capture PWA Install Prompt
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                document.getElementById('apkInstallBtn').classList.add('animate-bounce');
+            });
+        }
+
+        function initTheme() {
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+            renderGrid();
+        });
+
+        function loadUserStatus() {
+            const saved = localStorage.getItem(STORAGE_KEY_STATUS);
+            if (saved) {
+                try { userStatus = JSON.parse(saved); } catch (e) { userStatus = {}; }
+            }
+        }
+
+        function saveUserStatus() {
+            localStorage.setItem(STORAGE_KEY_STATUS, JSON.stringify(userStatus));
+            updateStatistics();
+        }
+
+        async function initPokemonData() {
+            const cached = localStorage.getItem(CACHE_KEY_DATA);
+            if (cached) {
+                try {
+                    pokemonData = JSON.parse(cached);
+                    if (pokemonData.length >= TOTAL_POKEMON) {
+                        loadingState.classList.add('hidden');
+                        applyFiltersAndSort();
+                        return;
+                    }
+                } catch (e) { console.warn("Cache reset", e); }
+            }
+            await fetchAllPokemonFromAPI();
+        }
+
+        async function fetchAllPokemonFromAPI() {
+            try {
+                document.getElementById('loadingTitle').innerText = 'Lade Pokémon Übersetzungen...';
+                const speciesRes = await fetch(`https://pokeapi.co/api/v2/pokemon-species?limit=${TOTAL_POKEMON}`);
+                const speciesList = await speciesRes.json();
+
+                const tempPokemon = new Array(TOTAL_POKEMON);
+                const BATCH_SIZE = 40;
+
+                for (let i = 0; i < speciesList.results.length; i += BATCH_SIZE) {
+                    const batch = speciesList.results.slice(i, i + BATCH_SIZE);
+                    
+                    await Promise.all(batch.map(async (item, batchIdx) => {
+                        const id = i + batchIdx + 1;
+                        if (id > TOTAL_POKEMON) return;
+
+                        try {
+                            const specRes = await fetch(item.url);
+                            const specData = await specRes.json();
+
+                            let nameDe = specData.name, nameEn = specData.name, nameJa = specData.name, nameRoomaji = specData.name;
+
+                            specData.names.forEach(n => {
+                                if (n.language.name === 'de') nameDe = n.name;
+                                if (n.language.name === 'en') nameEn = n.name;
+                                if (n.language.name === 'ja-Hrkt') nameJa = n.name;
+                                if (n.language.name === 'roomaji') nameRoomaji = n.name;
+                            });
+
+                            tempPokemon[id - 1] = {
+                                id: id,
+                                names: { de: nameDe, en: nameEn, ja: nameJa, roomaji: nameRoomaji || nameEn },
+                                image: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`
+                            };
+                        } catch (err) {
+                            tempPokemon[id - 1] = {
+                                id: id,
+                                names: { de: `Pokémon #${id}`, en: `Pokemon #${id}`, ja: `Pokemon #${id}`, roomaji: `Pokemon #${id}` },
+                                image: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`
+                            };
+                        }
+                    }));
+
+                    const percent = Math.min(100, Math.round(((i + BATCH_SIZE) / TOTAL_POKEMON) * 100));
+                    syncProgress.style.width = `${percent}%`;
+                }
+
+                pokemonData = tempPokemon.filter(Boolean);
+                try { localStorage.setItem(CACHE_KEY_DATA, JSON.stringify(pokemonData)); } catch (e) {}
+
+                loadingState.classList.add('hidden');
+                applyFiltersAndSort();
+            } catch (error) {
+                console.error("Ladefehler:", error);
+                document.getElementById('loadingTitle').innerText = 'Fehler beim Laden. Bitte neu laden.';
+            }
+        }
+
+        function getPokemonName(pokemon) {
+            if (!pokemon.names) return `Pokémon #${pokemon.id}`;
+            return pokemon.names[currentLang] || pokemon.names.de || pokemon.names.en;
+        }
+
+        function applyFiltersAndSort() {
+            filteredPokemon = pokemonData.filter(pokemon => {
+                const name = getPokemonName(pokemon).toLowerCase();
+                const matchesSearch = name.includes(searchQuery.toLowerCase()) || pokemon.id.toString() === searchQuery.trim();
+                const status = userStatus[pokemon.id] || { common: false, keep: false };
+                let matchesStatus = true;
+
+                if (activeStatusFilter === 'common') matchesStatus = status.common && !status.keep;
+                else if (activeStatusFilter === 'keep') matchesStatus = status.keep && !status.common;
+                else if (activeStatusFilter === 'both') matchesStatus = status.common && status.keep;
+                else if (activeStatusFilter === 'none') matchesStatus = !status.common && !status.keep;
+
+                return matchesSearch && matchesStatus;
+            });
+
+            filteredPokemon.sort((a, b) => {
+                const statusA = userStatus[a.id] || { common: false, keep: false };
+                const statusB = userStatus[b.id] || { common: false, keep: false };
+
+                if (activeSort === 'id-asc') return a.id - b.id;
+                if (activeSort === 'id-desc') return b.id - a.id;
+                if (activeSort === 'name-asc') return getPokemonName(a).localeCompare(getPokemonName(b));
+                if (activeSort === 'name-desc') return getPokemonName(b).localeCompare(getPokemonName(a));
+                if (activeSort === 'keep-first') return (statusB.keep ? 1 : 0) - (statusA.keep ? 1 : 0);
+                if (activeSort === 'common-first') return (statusB.common ? 1 : 0) - (statusA.common ? 1 : 0);
+                return 0;
+            });
+
+            renderGrid();
+            updateStatistics();
+        }
+
+        function renderGrid() {
+            grid.innerHTML = '';
+            if (filteredPokemon.length === 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+                emptyState.classList.remove('flex');
+            }
+
+            const isDarkMode = document.documentElement.classList.contains('dark');
+
+            filteredPokemon.forEach(pokemon => {
+                const status = userStatus[pokemon.id] || { common: false, keep: false };
+                const card = document.createElement('div');
+
+                let bgStyleClass = 'bg-white dark:bg-zinc-800 border-gray-200 dark:border-zinc-700/60';
+                if (status.common && status.keep) bgStyleClass = isDarkMode ? 'status-both-bg-dark border-amber-500/50' : 'status-both-bg border-amber-300';
+                else if (status.common) bgStyleClass = isDarkMode ? 'status-common-bg-dark border-yellow-600/50' : 'status-common-bg border-yellow-300';
+                else if (status.keep) bgStyleClass = isDarkMode ? 'status-keep-bg-dark border-red-600/50' : 'status-keep-bg border-red-300';
+
+                card.className = `relative rounded-2xl p-2.5 border shadow-sm transition-all hover:shadow-md duration-200 flex flex-col justify-between ${bgStyleClass}`;
+                const formattedId = `#${pokemon.id.toString().padStart(3, '0')}`;
+                const displayName = getPokemonName(pokemon);
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[10px] font-extrabold text-gray-400 dark:text-gray-400">${formattedId}</span>
+                        </div>
+                        <div class="w-full h-20 flex items-center justify-center my-0.5">
+                            <img src="${pokemon.image}" alt="${displayName}" class="h-full object-contain drop-shadow-sm hover:scale-105 transition-transform duration-200" loading="lazy" onerror="this.src='https://placehold.co/96x96?text=No+Img'">
+                        </div>
+                        <h2 class="font-bold text-xs text-center text-gray-800 dark:text-gray-100 mb-2 truncate" title="${displayName}">${displayName}</h2>
+                    </div>
+                    <div class="pt-1.5 border-t border-gray-200/50 dark:border-zinc-700/50 grid grid-cols-2 gap-1 text-[11px]">
+                        <label class="flex items-center justify-center space-x-1 py-1 px-1 bg-white/60 dark:bg-zinc-900/40 rounded-xl cursor-pointer hover:bg-white/80 transition-colors">
+                            <input type="checkbox" class="common-checkbox w-3.5 h-3.5 text-yellow-500 rounded border-gray-300 focus:ring-yellow-400" data-id="${pokemon.id}" ${status.common ? 'checked' : ''}>
+                            <span class="font-medium text-gray-700 dark:text-gray-200 text-[10px]">Common</span>
+                        </label>
+                        <label class="flex items-center justify-center space-x-1 py-1 px-1 bg-white/60 dark:bg-zinc-900/40 rounded-xl cursor-pointer hover:bg-white/80 transition-colors">
+                            <input type="checkbox" class="keep-checkbox w-3.5 h-3.5 text-red-600 rounded border-gray-300 focus:ring-red-500" data-id="${pokemon.id}" ${status.keep ? 'checked' : ''}>
+                            <span class="font-medium text-gray-700 dark:text-gray-200 text-[10px]">Behaltbar</span>
+                        </label>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            attachCheckboxListeners();
+        }
+
+        function attachCheckboxListeners() {
+            document.querySelectorAll('.common-checkbox').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const id = e.target.dataset.id;
+                    if (!userStatus[id]) userStatus[id] = { common: false, keep: false };
+                    userStatus[id].common = e.target.checked;
+                    saveUserStatus();
+                    applyFiltersAndSort();
+                });
+            });
+
+            document.querySelectorAll('.keep-checkbox').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const id = e.target.dataset.id;
+                    if (!userStatus[id]) userStatus[id] = { common: false, keep: false };
+                    userStatus[id].keep = e.target.checked;
+                    saveUserStatus();
+                    applyFiltersAndSort();
+                });
+            });
+        }
+
+        function updateStatistics() {
+            const total = pokemonData.length;
+            let commonCount = 0, keepCount = 0, checkedTotal = 0;
+
+            pokemonData.forEach(p => {
+                const s = userStatus[p.id];
+                if (s) {
+                    if (s.common) commonCount++;
+                    if (s.keep) keepCount++;
+                    if (s.common || s.keep) checkedTotal++;
+                }
+            });
+
+            document.getElementById('statTotal').innerText = total;
+            document.getElementById('statCommon').innerText = commonCount;
+            document.getElementById('statKeep').innerText = keepCount;
+
+            const percentage = total > 0 ? Math.round((checkedTotal / total) * 100) : 0;
+            document.getElementById('progressBar').style.width = `${percentage}%`;
+            document.getElementById('statPercent').innerText = `${percentage}%`;
+        }
+
+        function setupEventListeners() {
+            langSelect.addEventListener('change', (e) => {
+                currentLang = e.target.value;
+                localStorage.setItem('poke_lang', currentLang);
+                applyFiltersAndSort();
+                showToast(`Sprache: ${e.target.options[e.target.selectedIndex].text}`);
+            });
+
+            searchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                clearSearchBtn.classList.toggle('hidden', searchQuery.length === 0);
+                applyFiltersAndSort();
+            });
+
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                searchQuery = '';
+                clearSearchBtn.classList.add('hidden');
+                applyFiltersAndSort();
+            });
+
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => {
+                        b.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+                        b.classList.add('bg-gray-100', 'dark:bg-zinc-700', 'text-gray-700', 'dark:text-gray-300', 'border-transparent');
+                    });
+                    btn.classList.remove('bg-gray-100', 'dark:bg-zinc-700', 'text-gray-700', 'dark:text-gray-300', 'border-transparent');
+                    btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+                    activeStatusFilter = btn.dataset.status;
+                    applyFiltersAndSort();
+                });
+            });
+
+            sortSelect.addEventListener('change', (e) => {
+                activeSort = e.target.value;
+                applyFiltersAndSort();
+            });
+
+            // APK & PWA Modal Events
+            const apkModal = document.getElementById('apkModal');
+            document.getElementById('apkInstallBtn').addEventListener('click', () => apkModal.classList.remove('hidden'));
+            document.getElementById('closeApkModal').addEventListener('click', () => apkModal.classList.add('hidden'));
+            document.getElementById('closeModalFooter').addEventListener('click', () => apkModal.classList.add('hidden'));
+
+            // Download Canvas PNG Icon
+            document.getElementById('downloadIconBtn').addEventListener('click', () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512;
+                canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                
+                // Draw 512x512 High-Res Icon
+                const center = 256, radius = 225;
+                ctx.beginPath(); ctx.arc(center, center, radius, 0, Math.PI * 2); ctx.fillStyle = '#1e293b'; ctx.fill();
+                ctx.beginPath(); ctx.arc(center, center, radius * 0.92, Math.PI, 0, false); ctx.fillStyle = '#ef4444'; ctx.fill();
+                ctx.beginPath(); ctx.arc(center, center, radius * 0.92, 0, Math.PI, false); ctx.fillStyle = '#f8fafc'; ctx.fill();
+                ctx.fillStyle = '#1e293b'; ctx.fillRect(center - radius, center - 25, radius * 2, 50);
+                ctx.beginPath(); ctx.arc(center, center, 70, 0, Math.PI * 2); ctx.fillStyle = '#1e293b'; ctx.fill();
+                ctx.beginPath(); ctx.arc(center, center, 40, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+
+                const link = document.createElement('a');
+                link.download = 'pokedex_app_icon.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                showToast("Pokédex Icon (512x512) heruntergeladen!");
+            });
+
+            // Direct PWA Install trigger
+            document.getElementById('pwaDirectBtn').addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') showToast("App wird installiert!");
+                    deferredPrompt = null;
+                } else {
+                    showToast("Tippe im Chrome-Menü auf 'Zum Startbildschirm hinzufügen'");
+                }
+            });
+
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) fabScrollTop.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+                else fabScrollTop.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+            });
+
+            fabScrollTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').innerText = message;
+            document.getElementById('toastIcon').className = isError ? "w-4 h-4 text-red-500" : "w-4 h-4 text-green-500";
+            toast.classList.remove('opacity-0', 'translate-y-8', 'pointer-events-none');
+            setTimeout(() => toast.classList.add('opacity-0', 'translate-y-8', 'pointer-events-none'), 2500);
+        }
+    </script>
+</body>
+</html>
